@@ -1,0 +1,30 @@
+filetype: git-commit
+
+detect:
+    filename: "^(.*[\\/])?(COMMIT_EDITMSG|TAG_EDITMSG)$"
+
+rules:
+    # File changes
+    - "color red": "^.{73,}"
+    - "color yellow": "^.{69,72}"
+    - "color blue":  "^.{51,68}"
+    - "color white": "^.{0,50}"
+    - "color gray": "^#.*"
+    - "color purple": "^# On branch .*"
+    - "color gray": "^# On branch"
+    - "color gray": "^# Your branch is up to date with .*"
+    - "color purple": "^# Your branch is up to date with .*"
+    - "color gray": "^# Your branch is up to date with"
+    - "color green": "^# Your branch is up to date"
+    - "color gray": "^# Your branch is"
+
+    - "color green": "Changes to be committed:"
+    - "color bright green": "Changes not staged for commit:"
+
+    - "color blue": "(modified|renamed): .*"
+    - "color bright blue": "(modified|renamed):"
+    - "color red": "deleted: .*"
+    - "color bright red": "deleted:"
+    - "color green": "new file: .*"
+    - "color bright green": "new file:"
+    - "color red": "Untracked files:"

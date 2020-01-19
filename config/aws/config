@@ -1,0 +1,14 @@
+[profile user]
+credential_process = /home/___/.homesick/repos/dotfiles/config/aws/unlock-aws.sh user
+
+[profile role]
+source_profile = user
+role_arn = arn:aws:iam::1234567890:role/___@yourdomain.com
+
+[profile kops]
+source_profile = role
+role_arn = arn:aws:iam::1234567890:role/kops
+
+[profile sensu-role]
+source_profile = role
+role_arn = arn:aws:iam::1234567890:role/ops/sensu

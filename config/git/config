@@ -1,0 +1,83 @@
+[user]
+	name = Full Name
+[alias]
+  stage   = add
+  co      = checkout
+  cp      = cherry-pick
+  unstage = reset HEAD
+  ldiff   = difftool -t latex
+  fixup   = !sh -c 'git commit -m \"fixup! $(git log -1 --format='\\''%s'\\'' $@)\"' -
+  amend = "!f() { TARGET=$(git rev-parse "$1"); git commit --fixup=$TARGET ${@:2} && EDITOR=true git rebase -i --autostash --autosquash $TARGET^; }; f"
+  squash  = !sh -c 'git commit -m \"squash! $(git log -1 --format='\\''%s'\\'' $@)\"' -
+  ready   = rebase --interactive --autosquash @{u}
+  purr    = pull --rebase
+  puff    = pull --ff-only
+  meff    = merge --ff-only
+  suri    = submodule update --init --recursive
+  ds      = diff --staged
+  rbi     = rebase --interactive --autosquash
+  rl      = reflog --pretty=shortlog
+  meff-onto = "!f() { if [ -z "$1" ]; then printf 'Missing branch parameter\nUsage: git meff-onto <target-branch>\n'; exit 1; else git fetch . HEAD:"$1" && git checkout "$1"; fi }; f"
+  purge   = "!f() { git filter-branch --force --prune-empty \
+                                      --tag-name-filter cat \
+                                      --index-filter \"git rm -rf --cached --ignore-unmatch -- $1\" \
+                                      -- --all; }; f"
+  recommit = !bash -c 'commit_file=$(git rev-parse --git-dir)/COMMIT_EDITMSG && \
+                       grep -v "^#" $commit_file > $commit_file.tmp && \
+                       git commit -e -F $commit_file.tmp && \
+                       rm $commit_file.tmp'
+  clog = log --pretty=compat
+[log]
+  date = relative
+  mailmap = true
+[mailmap]
+  file = ~/.homesick/repos/dotfiles/config/git/mailmap
+[format]
+  pretty = shortlog
+[pretty]
+  shortlog = format:%C(auto,yellow)%h%C(auto,magenta)% G? %C(auto,blue)%>(12,trunc)%ad %C(auto,green)%<(7,trunc)%aN%C(auto,reset)%s%C(auto,red)% gD% D
+  compat = format:%C(yellow)%h%C(magenta)% G? %C(blue) %ad %C(green) %aN %C(reset)%s%C(red)
+[core]
+  pager = ~/.homesick/repos/dotfiles/config/git/diff-so-fancy/diff-so-fancy | less --tabs=2 -RFX
+  excludesfile = ~/.homesick/repos/dotfiles/config/git/gitignore-global
+  untrackedCache = true
+[interactive]
+  diffFilter = ~/.homesick/repos/dotfiles/config/git/diff-so-fancy/diff-so-fancy
+[push]
+  default = tracking
+  gpgSign = if-asked
+[merge]
+  tool = p4merge
+[diff]
+  tool = p4merge
+  compactionHeuristic = true
+[commit]
+	gpgSign = true
+[rebase]
+  autostash = true
+[submodule]
+  fetchJobs = 4
+[mergetool]
+  keepBackup = false
+  keepTemporaries = false
+  keepOriginals = false
+  prompt = false
+[difftool]
+  prompt = false
+[mergetool "p4merge"]
+  path = p4merge
+  cmd = p4merge "$BASE" "$LOCAL" "$REMOTE" "$MERGED"
+[difftool "p4merge"]
+  path = p4merge
+  cmd = p4merge "$LOCAL" "$REMOTE"
+[color]
+  branch = auto
+  diff = auto
+  interactive = auto
+  status = auto
+[difftool.latex]
+  cmd = latexdiff "$LOCAL" "$REMOTE"
+[rerere]
+  enabled = true
+[include]
+  path = ~/.gitconfig-local

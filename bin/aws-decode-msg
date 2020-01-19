@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+aws_decode_msg() {
+  local msg
+  if [[ -n $1 ]]; then
+    msg=$1
+  else
+    read -r msg
+  fi
+  aws sts decode-authorization-message --encoded-message "$msg" | \
+    jshon -e DecodedMessage -u | \
+    jq .
+}
+
+aws_decode_msg "$@"

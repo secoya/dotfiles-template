@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+
+download-git-path() {
+  DOC="Download a subdirectory of a git repository
+Usage:
+  download-git-path <repo-url> <tree-ish> <pathspec>..."
+# docopt parser below, refresh this parser with `docopt.sh download-git-path`
+# shellcheck disable=2016,1091,2034
+docopt() {
+source "$HOME/.homesick/repos/dotfiles/cli/docopt-lib-0.9.15.sh" '0.9.15' || {
+ret=$?; printf -- "exit %d\n" "$ret"; exit "$ret"; }; set -e
+trimmed_doc=${DOC:0:106}; usage=${DOC:44:62}; digest=3638b; shorts=(); longs=()
+argcounts=(); node_0(){ value _repo_url_ a; }; node_1(){ value _tree_ish_ a; }
+node_2(){ value _pathspec_ a true; }; node_3(){ oneormore 2; }; node_4(){
+required 0 1 3; }; node_5(){ required 4; }; cat <<<' docopt_exit() {
+[[ -n $1 ]] && printf "%s\n" "$1" >&2; printf "%s\n" "${DOC:44:62}" >&2; exit 1
+}'; unset var__repo_url_ var__tree_ish_ var__pathspec_; parse 5 "$@"
+local prefix=${DOCOPT_PREFIX:-''}; local docopt_decl=1
+[[ $BASH_VERSION =~ ^4.3 ]] && docopt_decl=2; unset "${prefix}_repo_url_" \
+"${prefix}_tree_ish_" "${prefix}_pathspec_"
+eval "${prefix}"'_repo_url_=${var__repo_url_:-}'
+eval "${prefix}"'_tree_ish_=${var__tree_ish_:-}'
+if declare -p var__pathspec_ >/dev/null 2>&1; then
+eval "${prefix}"'_pathspec_=("${var__pathspec_[@]}")'; else
+eval "${prefix}"'_pathspec_=()'; fi; local docopt_i=0
+for ((docopt_i=0;docopt_i<docopt_decl;docopt_i++)); do
+declare -p "${prefix}_repo_url_" "${prefix}_tree_ish_" "${prefix}_pathspec_"
+done; }
+# docopt parser above, complete command for generating this parser is `docopt.sh --library='"$HOME/.homesick/repos/dotfiles/cli/docopt-lib-0.9.15.sh"' download-git-path`
+  eval "$(docopt "$@")"
+  local tmpgit
+  tmpgit=$(mktemp -d)
+  # shellcheck disable=SC2064
+  trap "rm -rf \"$tmpgit\"" EXIT
+  git init "$tmpgit"
+  (
+    cd "$tmpgit" && \
+    git config core.sparseCheckout true 2>/dev/null && \
+    printf "%s\n" "${_pathspec_[@]}" >> .git/info/sparse-checkout && \
+    git remote add -f origin "$_repo_url_" 2>/dev/null && \
+    git checkout "$_tree_ish_" 2>/dev/null
+  )
+  local repodir
+  repodir=$(basename "$_repo_url_")
+  local dir
+  for dir in "${_pathspec_[@]}"; do
+    if [[ ! -d "$tmpgit/$dir" ]]; then
+      printf "%s is not a directory" "$tmpgit/$dir" >&2
+      continue
+    fi
+    mkdir -p "$repodir/$(dirname "$dir")"
+    mv "$tmpgit/$dir" "$repodir/$(dirname "$dir")"
+  done
+}
+
+download-git-path "$@"

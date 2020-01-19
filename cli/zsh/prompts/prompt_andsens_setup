@@ -1,0 +1,412 @@
+#!/usr/bin/env zsh
+# andsens' Theme
+# Based on agnoster theme
+#
+# # README
+#
+# In order for this theme to render correctly, you will need a
+# [Powerline-patched font](https://gist.github.com/1595572).
+#
+# In addition, I recommend the
+# [Solarized theme](https://github.com/altercation/solarized/) and, if you're
+# using it on Mac OS X, [iTerm 2](http://www.iterm2.com/) over Terminal.app -
+# it has significantly better color fidelity.
+
+prompt_andsens_setup() {
+  # Without having read this: http://zsh.sourceforge.net/Doc/Release/Prompt-Expansion.html
+  # you will have no clue what is going on below
+
+  # psvar legend
+  psvar=()
+  psvar_ingit=1
+  psvar_gitdir=2
+  psvar_gitshowdirty=3
+  psvar_gitdirty=4
+  psvar_gitdetachedhead=5
+  psvar_gitrefname=6
+  psvar_gitaction=7
+  psvar_gitahead=8
+  psvar_gitbehind=9
+  psvar_gitstashed=10
+  psvar_gitunstaged=11
+  psvar_gitstaged=12
+  psvar_k8senable=13
+  psvar_k8sctx=14
+
+if zstyle -s ':prompt:andsens:git:dirty' check-threshhold _check_threshhold; then
+    if [[ $(uname) == "Darwin" ]]; then
+      if ! type gdate >/dev/null 2>&1; then
+        printf "Cannot auto disable git dirtyness check. You need \`gdate' from coreutils for that.\n" >&2
+        zstyle -d ':prompt:andsens:git:dirty' check-threshhold
+      fi
+    else
+      if [[ $(date +%s.%N) =~ N$ ]]; then
+        printf "Cannot auto disable git dirtyness check. Your \`date' command does not support milliseconds output.\n" >&2
+        zstyle -d ':prompt:andsens:git:dirty' check-threshhold
+      fi
+    fi
+  fi
+  unset _check_threshhold
+
+  if type kubectl &>/dev/null; then
+    zstyle ':prompt:andsens:k8s:ctx' enabled 'yes'
+  else
+    zstyle ':prompt:andsens:k8s:ctx' enabled 'no'
+  fi
+
+  setopt PROMPT_SUBST
+  add-zsh-hook precmd prompt_andsens_precmd
+  add-zsh-hook preexec prompt_andsens_preexec
+  PROMPT="%{%f%b%k%}"
+  # Exit code, show red X when it is not 0
+  PROMPT+="%(0?..%{%F{red}✘%G%})"
+  # Background jobs, show gear if there is at least 1
+  PROMPT+="%(1j. %F{cyan}%{⚙%G%}.)"
+  # Spacing, pad the prompt if no X or gear has been written
+  PROMPT+="%(1l. .)"
+
+  # user@host
+  if [[ "$USER" != "$DEFAULT_USER" || -n "$SSH_CLIENT" ]]; then
+    # BG & FG are variables so we can change it depending on the server environment
+    env_bg='black'
+    env_fg='default'
+    if [[ $SERVER_ENV == 'production' ]]; then
+      env_bg='red'
+      env_fg='white'
+    elif [[ $SERVER_ENV == 'staging' ]]; then
+      env_bg='cyan'
+      env_fg='white'
+    fi
+    # Segment separator - if we have already written something (the %(1l..))
+    PROMPT+="%(1l.%F{black}%B%K{$env_bg}%{%G%}%b.)"
+    PROMPT+="%K{$env_bg}%F{$env_fg} %n@%m %K{blue}%F{$env_bg}"
+  else
+    PROMPT+="%(1l.%F{black}%B%K{blue}%{%G%}%b.)"
+  fi
+  # Current working dir
+  PROMPT+="%K{blue}%F{black} %~"
+  # Segment separator color based on FG color
+  PROMPT+="%F{blue}"
+
+  ### Kubernetes ###
+
+  # If k8s
+  PROMPT+="%(${psvar_k8senable}V."
+  # BG color
+  PROMPT+="%K{cyan}"
+  # Segment separator
+  PROMPT+="%{%G%}"
+  PROMPT+="%F{black}⎈ %${psvar_k8sctx}v"
+  # Segment separator color based on FG color
+  PROMPT+="%F{cyan}"
+  PROMPT+=".)"
+
+  # This conditional covers almost all lines below -- %(1V.InGitDir.NotInGitDir)
+  PROMPT+="%(${psvar_ingit}V."
+
+  ### GIT ###
+  # Segment separator between cwd and git
+  # BG can be either yellow (dirty), green (clean), or white (unknown)
+  PROMPT+="%(${psvar_gitshowdirty}V.%(${psvar_gitdirty}V.%K{yellow}.%K{green})%{%G%}%F{black}.%K{black}%{%G%}%F{white})"
+
+  # Git branch or ref name
+  PROMPT+="%(${psvar_gitdetachedhead}V.%{➦%G%}.%{%G%}) %${psvar_gitrefname}v"
+
+  # The action we are currently running (e.g. 'merge', 'rebase', 'cherry-pick' or '' if none)
+  PROMPT+="%(${psvar_gitaction}V.|%${psvar_gitaction}v.)"
+
+  # How many commits we are ahead of upstream
+  PROMPT+="%(${psvar_gitahead}V.%{↑%G%}%${psvar_gitahead}v.)"
+
+  # How many commits we are behind upstream
+  PROMPT+="%(${psvar_gitbehind}V.%{↓%G%}%${psvar_gitbehind}v.)"
+
+  # If there are stashed commits
+  PROMPT+="%(${psvar_gitstashed}V.%{⍟%G%}.)"
+
+  # If there are unstaged commits (only show if known)
+  PROMPT+="%(${psvar_gitshowdirty}V.%(${psvar_gitunstaged}V.%{●%G%}.).)"
+
+  # If there are staged commits (only show if known)
+  PROMPT+="%(${psvar_gitshowdirty}V.%(${psvar_gitstaged}V.%{✚%G%} .).)"
+
+  # Done. Define segment separator FG based on dirty/clean/unknown
+  PROMPT+="%(${psvar_gitshowdirty}V.%(${psvar_gitdirty}V.%F{yellow}.%F{green}).%F{black})"
+
+  ### NOT GIT ###
+  PROMPT+=".)"
+  ### Common ###
+  PROMPT+="%K{default}%{%G%}"
+  PROMPT+="%{%f%b%k%} "
+}
+
+prompt_andsens_precmd() {
+  if zstyle -t ':prompt:andsens:k8s:ctx' enabled; then
+    psvar[$psvar_k8senable]=true
+    prompt_andsens_setk8sctx
+  else
+    psvar[$psvar_k8senable]=
+  fi
+  if prompt_andsens_isgit; then
+    psvar[$psvar_ingit]=true
+    prompt_andsens_setrepoinfo
+    if zstyle -T ':prompt:andsens:git:dirty' show && \
+      ! zstyle -t ":prompt:andsens:git:dirty:${psvar[${psvar_gitdir}]}" auto-disable; then
+      psvar[$psvar_gitshowdirty]=true
+
+      local threshhold
+      zstyle -s ':prompt:andsens:git:dirty' check-threshhold threshhold
+      if [[ -n $threshhold ]]; then
+        local start_dirty_check
+        local end_dirty_check
+        local check_duration
+        start_dirty_check=$(gdate +%s.%N 2>/dev/null || date +%s.%N)
+      fi
+
+      prompt_andsens_setdirtyness
+
+      if [[ -n $threshhold ]]; then
+        end_dirty_check=$(gdate +%s.%N 2>/dev/null || date +%s.%N)
+        check_duration=$((end_dirty_check - start_dirty_check))
+        if [[ $check_duration > $threshhold ]]; then
+          printf "\033[31mPrompt: Auto disabling git dirtyness check for the git dir \`%s' (%.3fs > %.3fs)\033[0m\n" \
+            "${psvar[${psvar_gitdir}]}" "$check_duration" "$threshhold"
+          zstyle ":prompt:andsens:git:dirty:${psvar[${psvar_gitdir}]}" auto-disable 'yes'
+        fi
+      fi
+
+    else
+      psvar[$psvar_gitshowdirty]=
+    fi
+  else
+    psvar[$psvar_ingit]=
+  fi
+}
+
+prompt_andsens_preexec() {
+  if [[ -n "$TMUX" && -n "$SSH_AUTH_SOCK" ]]; then
+    # Update $SSH_AUTH_SOCK when we're in tmux
+    # Would be eval $(tmux show-environment SSH_AUTH_SOCK) if not for wheezy
+    eval "export $(tmux show-environment | grep SSH_AUTH_SOCK)"
+  fi
+}
+
+prompt_andsens_isgit() {
+  if [[ $(git rev-parse --is-inside-work-tree 2> /dev/null) == 'true' ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+prompt_andsens_setrepoinfo() {
+  local gitdir=$(git rev-parse --git-dir 2>/dev/null)
+  if [[ $gitdir != "/"* ]]; then
+    # gitdir is relative, make it absolute
+    psvar[$psvar_gitdir]=$(cd "$(dirname '$gitdir')" &>/dev/null && printf "%s/%s" "$PWD" "${gitdir##*/}")
+  fi
+  # Get the branch name or the commit sha of HEAD if detached
+  psvar[$psvar_gitrefname]=$(git symbolic-ref --short HEAD 2>/dev/null)
+  if [[ $? != 0 ]]; then
+    psvar[$psvar_gitdetachedhead]=true
+    psvar[$psvar_gitrefname]=$(git rev-parse --short HEAD 2> /dev/null)
+  else
+    # If not in detached state, check how many commits we are behind/ahead of upstream
+    psvar[$psvar_gitdetachedhead]=
+    local ahead
+    local behind
+    ahead=$(git rev-list "${psvar[${psvar_gitrefname}]}"@\{upstream\}..HEAD 2>/dev/null | wc -l | tr -d ' ')
+    behind=$(git rev-list HEAD.."${psvar[${psvar_gitrefname}]}"@\{upstream\} 2>/dev/null | wc -l | tr -d ' ')
+    if [[ $ahead -gt 0 ]]; then
+      psvar[$psvar_gitahead]=$ahead
+    else
+      psvar[$psvar_gitahead]=
+    fi
+    if [[ $behind -gt 0 ]]; then
+      psvar[$psvar_gitbehind]=$behind
+    else
+      psvar[$psvar_gitbehind]=
+    fi
+  fi
+  # Get the action we are currently running (e.g. 'merge', 'rebase', 'cherry-pick' or '' if none)
+  psvar[$psvar_gitaction]=$(__VCS_INFO_git_getaction "$gitdir")
+  # Check if there are any stashes
+  if [[ -s $gitdir/refs/stash ]]; then
+    psvar[$psvar_gitstashed]=true
+  else
+    psvar[$psvar_gitstashed]=
+  fi
+}
+
+prompt_andsens_setdirtyness() {
+  # Check if there are any tracked files that have been modified
+  psvar[$psvar_gitdirty]=
+  if ! git diff --no-ext-diff --quiet --exit-code; then
+    psvar[$psvar_gitdirty]=true
+    psvar[$psvar_gitunstaged]=true
+  else
+    psvar[$psvar_gitunstaged]=
+  fi
+  # Check if there are any staged files
+  if ! git diff-index --quiet --cached HEAD 2>/dev/null; then
+    psvar[$psvar_gitdirty]=true
+    psvar[$psvar_gitstaged]=true
+  else
+    psvar[$psvar_gitstaged]=
+  fi
+  # Check if there are any untracked files, this makes the git segment yellow
+  # Since staged=true & unstaged=true already do that, we only need to check
+  # if both are false (i.e. dirty != true). Do this via lazy eval.
+  if [[ $psvar[$psvar_gitdirty] != true && -n $(git status --untracked-files=normal --porcelain 2>/dev/null) ]]; then
+    psvar[$psvar_gitdirty]=true
+  fi
+}
+
+# https://github.com/zsh-users/zsh/blob/master/Functions/VCS_Info/Backends/VCS_INFO_get_data_git
+__VCS_INFO_git_getaction () {
+    local gitdir=$1
+    local tmp
+
+    for tmp in "${gitdir}/rebase-apply" \
+               "${gitdir}/rebase"       \
+               "${gitdir}/../.dotest" ; do
+        if [[ -d ${tmp} ]] ; then
+            if   [[ -f "${tmp}/rebasing" ]] ; then
+                print "rebase"
+            elif [[ -f "${tmp}/applying" ]] ; then
+                print "am"
+            else
+                print "am/rebase"
+            fi
+            return 0
+        fi
+    done
+
+    for tmp in "${gitdir}/rebase-merge/interactive" \
+               "${gitdir}/.dotest-merge/interactive" ; do
+        if [[ -f "${tmp}" ]] ; then
+            print "rebase-i"
+            return 0
+        fi
+    done
+
+    for tmp in "${gitdir}/rebase-merge" \
+               "${gitdir}/.dotest-merge" ; do
+        if [[ -d "${tmp}" ]] ; then
+            print "rebase-m"
+            return 0
+        fi
+    done
+
+    if [[ -f "${gitdir}/MERGE_HEAD" ]] ; then
+        print "merge"
+        return 0
+    fi
+
+    if [[ -f "${gitdir}/BISECT_LOG" ]] ; then
+        print "bisect"
+        return 0
+    fi
+
+    if [[ -f "${gitdir}/CHERRY_PICK_HEAD" ]] ; then
+        if [[ -d "${gitdir}/sequencer" ]] ; then
+            print "cherry-seq"
+        else
+            print "cherry"
+        fi
+        return 0
+    fi
+
+    if [[ -d "${gitdir}/sequencer" ]] ; then
+         print "cherry-or-revert"
+         return 0
+    fi
+
+    return 1
+}
+
+prompt_andsens_setk8sctx() {
+  local context
+  local ctx
+  context=$(kubectl config current-context)
+  if zstyle -s ':prompt:andsens:k8s:ctx:alias' "$context" ctx; then
+    psvar[$psvar_k8sctx]=$ctx
+  else
+    psvar[$psvar_k8sctx]=$context
+  fi
+  local namespace
+  namespace=$(kubectl config get-contexts "$context" --no-headers | tr -s '[:blank:]' | cut -d ' ' -f 5)
+  if [[ $namespace != 'default' ]]; then
+    psvar[$psvar_k8sctx]=$psvar[$psvar_k8sctx]/$namespace
+  fi
+}
+
+prompt_andsens() {
+  local USAGE="prompt_andsens - Manage prompt settings
+
+Usage:
+  prompt_andsens enable FEATURE
+  prompt_andsens disable FEATURE
+
+Features:
+  k8sctx     Display the current kubernetes context
+  # git        Display the current git repo state
+  # git-dirty  Color the git section depending on the working copy state
+
+Options:
+  -h --help  Show this message"
+  if [[ "$1" = '-h' || "$1" = '--help' ]]; then
+    printf "%s\n" "$USAGE"
+    return 0
+  fi
+  if [[ -z "$1" || -z "$2" ]]; then
+    printf "%s\n" "$USAGE" >&2
+    return 1
+  fi
+  case $1 in
+    -h | --help)
+      printf "%s\n" "$USAGE"
+      return 0
+      ;;
+    enable)
+      case $2 in
+        k8sctx)
+          zstyle ':prompt:andsens:k8s:ctx' enabled true
+          printf "Kubernetes context feature has been enabled\n"
+          return 0
+          ;;
+        git | git-dirty)
+          printf "Not yet implemented" >&2
+          return 1
+          ;;
+        *)
+          printf "%s\n" "$USAGE" >&2
+          return 1
+          ;;
+      esac
+      ;;
+    disable)
+      case $2 in
+        k8sctx)
+          zstyle ':prompt:andsens:k8s:ctx' enabled
+          printf "Kubernetes context feature has been disabled\n"
+          return 0
+          ;;
+        git | git-dirty)
+          printf "Not yet implemented" >&2
+          return 1
+          ;;
+        *)
+          printf "%s\n" "$USAGE" >&2
+          return 1
+          ;;
+      esac
+      ;;
+    *)
+      printf "%s\n" "$USAGE" >&2
+      return 1
+    ;;
+  esac
+}
+
+prompt_andsens_setup "$@"

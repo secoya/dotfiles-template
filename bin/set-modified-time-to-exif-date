@@ -1,0 +1,33 @@
+#!/bin/bash
+
+function set-modified-time-to-exif-date {
+  DOC="Change the modified time of image files so they match the EXIF data
+Usage:
+  set-modified-time-to-exif-date FILE"
+# docopt parser below, refresh this parser with `docopt.sh set-modified-time-to-exif-date`
+# shellcheck disable=2016,1091,2034
+docopt() {
+source "$HOME/.homesick/repos/dotfiles/cli/docopt-lib-0.9.14.sh" '0.9.14' || {
+ret=$?; printf -- "exit %d\n" "$ret"; exit "$ret"; }; set -e
+trimmed_doc=${DOC:0:112}; usage=${DOC:68:44}; digest=01408; shorts=(); longs=()
+argcounts=(); node_0(){ value FILE a; }; node_2(){ required 0; }; node_3(){
+required 2; }; cat <<<' docopt_exit() { [[ -n $1 ]] && printf "%s\n" "$1" >&2
+printf "%s\n" "${DOC:68:44}" >&2; exit 1; }'; unset var_FILE; parse 3 "$@"
+local prefix=${DOCOPT_PREFIX:-''}; local docopt_decl=1
+[[ $BASH_VERSION =~ ^4.3 ]] && docopt_decl=2; unset "${prefix}FILE"
+eval "${prefix}"'FILE=${var_FILE:-}'; local docopt_i=0
+for ((docopt_i=0;docopt_i<docopt_decl;docopt_i++)); do
+declare -p "${prefix}FILE"; done; }
+# docopt parser above, complete command for generating this parser is `docopt.sh --library='"$HOME/.homesick/repos/dotfiles/cli/docopt-lib-0.9.14.sh"' set-modified-time-to-exif-date`
+  eval "$(docopt "$@")"
+  local date
+  if ! date=$(identify -format "%[EXIF:DateTime]" "$FILE"); then
+    return $?
+  fi
+  if ! date=$(perl -n -e 'chomp; s/^(\d+):(\d+):(\d+) (\d+):(\d+):(\d+)$/$1$2$3$4$5.$6/ && print' <<< "$date"); then
+    return $?
+  fi
+  touch -t "$date" "$FILE"
+}
+
+set-modified-time-to-exif-date "$@"

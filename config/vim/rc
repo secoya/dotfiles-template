@@ -1,0 +1,48 @@
+" No $HOME/.vim folder, use homeshick folder instead
+set runtimepath+=$HOME/.homesick/repos/dotfiles/config/vim
+
+" Load pathogen plugin loader
+execute pathogen#infect()
+
+
+" Purty colors
+syntax enable
+set background=dark
+let g:solarized_termtrans = 1
+" let g:solarized_termcolors = 256
+colorscheme solarized
+
+" Why the hell would you want 8?
+set tabstop=2
+set softtabstop=2
+set shiftwidth=2
+
+" Disable awesome mouse support
+set mouse=
+
+map  g0
+imap  g0
+map  $
+imap  $
+
+" Display linenumbers
+set number
+
+command L :set number!
+
+" Nice little shortcut to write as sudo
+command W :execute ':silent w !sudo tee % > /dev/null' | :edit!
+command Wq :execute ':W' | :q
+command WQ :Wq
+
+" Mouse commands
+command MM :set mouse=
+command M :set mouse=a
+
+" Indent Guides
+let g:indent_guides_enable_on_vim_startup = 1
+let g:indent_guides_space_guides = 1
+let g:indent_guides_auto_colors = 0
+let g:indent_guides_guide_size = 1
+autocmd VimEnter,Colorscheme * :hi IndentGuidesOdd  guibg=brblack ctermbg=8
+autocmd VimEnter,Colorscheme * :hi IndentGuidesEven guibg=base00 ctermbg=0

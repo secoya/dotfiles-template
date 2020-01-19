@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+kubectl-decode() {
+  DOC="Decode a kubernetes secret
+Usage:
+  kubectl decode SECRET FILENAME"
+# docopt parser below, refresh this parser with `docopt.sh kubectl-decode`
+# shellcheck disable=2016,1091,2034
+docopt() {
+source "$HOME/.homesick/repos/dotfiles/cli/docopt-lib-0.9.14.sh" '0.9.14' || {
+ret=$?; printf -- "exit %d\n" "$ret"; exit "$ret"; }; set -e
+trimmed_doc=${DOC:0:66}; usage=${DOC:27:39}; digest=0d101; shorts=(); longs=()
+argcounts=(); node_0(){ value SECRET a; }; node_1(){ value FILENAME a; }
+node_2(){ _command decode; }; node_6(){ required 2 0 1; }; node_7(){ required 6
+}; cat <<<' docopt_exit() { [[ -n $1 ]] && printf "%s\n" "$1" >&2
+printf "%s\n" "${DOC:27:39}" >&2; exit 1; }'; unset var_SECRET var_FILENAME \
+var_decode; parse 7 "$@"; local prefix=${DOCOPT_PREFIX:-''}; local docopt_decl=1
+[[ $BASH_VERSION =~ ^4.3 ]] && docopt_decl=2; unset "${prefix}SECRET" \
+"${prefix}FILENAME" "${prefix}decode"; eval "${prefix}"'SECRET=${var_SECRET:-}'
+eval "${prefix}"'FILENAME=${var_FILENAME:-}'
+eval "${prefix}"'decode=${var_decode:-false}'; local docopt_i=0
+for ((docopt_i=0;docopt_i<docopt_decl;docopt_i++)); do
+declare -p "${prefix}SECRET" "${prefix}FILENAME" "${prefix}decode"; done; }
+# docopt parser above, complete command for generating this parser is `docopt.sh --library='"$HOME/.homesick/repos/dotfiles/cli/docopt-lib-0.9.14.sh"' kubectl-decode`
+  eval "$(docopt "$@")"
+  local secret_name=$1
+  local filename=$2
+  kubectl get secret "$secret_name" \
+    -o 'go-template={{index .data "'"$filename"'"}}' \
+    | (base64 -D 2>/dev/null || base64 -d)
+}
+
+kubectl-decode "$@"

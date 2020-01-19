@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [[ -e /proc/loadavg ]]; then
+	loadavg=$(cut -d " " -f 1 /proc/loadavg)
+else
+	loadavg=$(sysctl -n vm.loadavg | awk -F' ' '{print $2}')
+fi
+printf "%.2f" "$loadavg"

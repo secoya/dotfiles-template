@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+set -e
+
+function micro {
+    local version="1.4.1"
+    local micro_ver_destination="$HOME/.homesick/repos/dotfiles/bin/.micro/micro-${version}"
+    if [[ ! -f $micro_ver_destination ]]; then
+        local micro_url
+        local micro_hash
+        local micro_download_hash
+        local micro_tmp_dir
+        micro_tmp_dir=$(mktemp -d)
+        micro_tmp_archive="${micro_tmp_dir}/micro-${version}.tar.gz"
+        local fetch_command
+        case $(uname) in
+            Darwin)
+                micro_url="https://github.com/zyedidia/micro/releases/download/v${version}/micro-${version}-osx.tar.gz"
+                micro_hash="063d2bf9033ac4fb919abd55c4f9a41d82cdc9b3054f89a16cf1748c406edb02"
+                ;;
+            Linux)
+                micro_url="https://github.com/zyedidia/micro/releases/download/v${version}/micro-${version}-linux64.tar.gz"
+                micro_hash="e7d4c9427f9fdfed78e69d42cf518e93ae15fc8f70b7f0f87d292ed81206e900"
+                ;;
+            FreeBSD)
+                micro_url="https://github.com/zyedidia/micro/releases/download/v${version}/micro-${version}-freebsd64.tar.gz"
+                micro_hash="68d05b9e8593a998e4802aef408e43dc477d5b6e84a67f1ed6ddbb425110b1f7"
+                ;;
+            *)
+                printf "micro not installed, unknown system: %s.\n" "$(uname)" >&2
+                rm -rf "$micro_tmp_dir"
+                return 1
+                ;;
+        esac
+        if type curl &>/dev/null; then
+            fetch_command="curl --progress-bar --location --output \"$micro_tmp_archive\" \"$micro_url\""
+        elif type wget &>/dev/null; then
+            fetch_command="wget -q --show-progress --output-document=\"$micro_tmp_archive\" \"$micro_url\""
+        else
+            printf "micro not installed, curl & wget not available.\nFetch micro at %s\n" "$micro_url"
+            rm "$micro_tmp_dir"
+            return 1
+        fi
+        printf "micro-%s not installed, fetching at %s\n" "$version" "$micro_url" >&2
+        eval "$fetch_command"
+        printf "Checking shasum.\n" >&2
+        micro_download_hash=$(shasum -a 256 "$micro_tmp_archive" | cut -d' ' -f1)
+        if [[ $micro_hash != "$micro_download_hash" ]]; then
+            printf "micro shasum check failed!\n(was %s expected %s)\nExiting...\n" "$micro_download_hash" "$micro_hash" >&2
+            rm -rf "$micro_tmp_dir"
+            return 1
+        fi
+        printf "shasum checks out, enabling micro and launching it with original arguments.\n" >&2
+        tar --strip-components=1 -C "$micro_tmp_dir" -xzf "$micro_tmp_archive" "micro-${version}/micro"
+        mv "$micro_tmp_dir/micro" "$micro_ver_destination"
+        chmod +x "$micro_ver_destination"
+        rm "$micro_tmp_archive"
+        rmdir "$micro_tmp_dir"
+    fi
+
+    exec "$micro_ver_destination" "$@"
+}
+
+micro "$@"

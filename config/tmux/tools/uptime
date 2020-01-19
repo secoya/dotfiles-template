@@ -1,0 +1,27 @@
+#!/bin/bash
+# uptime.sh
+# get uptime from /proc/uptime
+
+if [[ -e /proc/uptime ]]; then
+	uptime=$(</proc/uptime)
+else
+	uptime=$(($(date '+%s')-$(sysctl -n kern.boottime | cut -c9-18)))
+fi
+uptime=${uptime%%.*}
+
+s=$(( uptime%60 ))
+m=$(( uptime/60%60 ))
+h=$(( uptime/60/60%24 ))
+d=$(( uptime/60/60/24 ))
+w=$(( uptime/60/60/24/7 ))
+
+function die {
+	printf "$1"
+	exit 0
+}
+
+[ $w = 0 ] || die "$w weeks"
+[ $d = 0 ] || die "$d days"
+[ $h = 0 ] || die "$h hours"
+[ $m = 0 ] || die "$m minutes"
+[ $s = 0 ] || die "$s seconds"

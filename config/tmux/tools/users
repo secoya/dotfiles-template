@@ -1,0 +1,3 @@
+#!/bin/bash
+users=$(users | wc -w | tr -cd '0123456789')
+printf "%d" "$users"

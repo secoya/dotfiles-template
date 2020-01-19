@@ -1,0 +1,32 @@
+LogLevel error
+
+################
+# YOUR SERVERS #
+################
+
+Host *.yourdomain.com
+	User ___
+	ForwardAgent yes
+	ForwardX11 yes
+
+###########
+# Vagrant #
+###########
+
+Host 127.0.0.1
+	ForwardAgent yes
+	ForwardX11 yes
+
+Host *.local
+	StrictHostKeyChecking no
+	UserKnownHostsFile /dev/null
+	# Use IPv4 (inet) for connecting, mDNS rsolves to IPv6 (inet6)
+	# but ssh can't figure it out for some reason
+	AddressFamily inet
+
+############
+# DEFAULTS #
+############
+
+Host *
+	NoHostAuthenticationForLocalhost yes
